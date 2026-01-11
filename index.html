@@ -106,6 +106,7 @@
             margin-top: 20px;
             display: none;
             font-weight: bold;
+            text-align: right;
         }
 
         .status-message.success {
@@ -185,6 +186,40 @@
             font-weight: bold;
             color: #333;
         }
+
+        .debug-section {
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: right;
+            font-size: 0.85em;
+            display: none;
+        }
+
+        .debug-section pre {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            text-align: left;
+            direction: ltr;
+        }
+
+        .test-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .test-btn:hover {
+            background: #218838;
+        }
     </style>
 </head>
 <body>
@@ -207,6 +242,7 @@
             <small style="color: #666; display: block; margin-top: 5px;">
                 احصل على هذا الرابط من n8n Webhook Trigger
             </small>
+            <button class="test-btn" onclick="testConnection()">🔍 اختبر الاتصال</button>
         </div>
 
         <!-- Exam Info Card -->
@@ -249,22 +285,52 @@
         <!-- Status Message -->
         <div class="status-message" id="statusMessage"></div>
 
+        <!-- Debug Section -->
+        <div class="debug-section" id="debugSection">
+            <h4 style="margin-bottom: 10px;">📊 معلومات التشخيص:</h4>
+            <pre id="debugInfo"></pre>
+        </div>
+
         <!-- Footer -->
         <div class="footer">
             <p>الامتحان سيتم إرساله إلى: widadtabook@gmail.com</p>
             <p style="margin-top: 5px; font-size: 0.85em;">
                 سيتم تحديث Google Sheets تلقائياً بعد التوليد
             </p>
+            <p style="margin-top: 10px; font-size: 0.8em; color: #999;">
+                📌 نصيحة: اضغط F12 لفتح Console ورؤية التفاصيل التقنية
+            </p>
         </div>
     </div>
 
     <script>
+        // Enable debug mode
+        const DEBUG_MODE = true;
+
+        // Function to log debug info
+        function logDebug(message, data = null) {
+            if (DEBUG_MODE) {
+                console.log('🔍 [DEBUG]', message, data || '');
+                const debugDiv = document.getElementById('debugInfo');
+                const debugSection = document.getElementById('debugSection');
+                debugSection.style.display = 'block';
+                
+                const timestamp = new Date().toLocaleTimeString('ar-SA');
+                let logEntry = `[${timestamp}] ${message}`;
+                if (data) {
+                    logEntry += '\n' + JSON.stringify(data, null, 2);
+                }
+                debugDiv.textContent = logEntry + '\n\n' + debugDiv.textContent;
+            }
+        }
+
         // Function to show status messages
         function showStatus(message, type) {
             const statusDiv = document.getElementById('statusMessage');
             statusDiv.textContent = message;
             statusDiv.className = 'status-message ' + type;
             statusDiv.style.display = 'block';
+            logDebug(`Status: ${type}`, message);
         }
 
         // Function to hide status
@@ -272,11 +338,39 @@
             document.getElementById('statusMessage').style.display = 'none';
         }
 
+        // Function to test connection
+        async function testConnection() {
+            const webhookUrl = document.getElementById('webhookUrl').value.trim();
+            
+            if (!webhookUrl) {
+                showStatus('⚠️ الرجاء إدخال رابط Webhook أولاً!', 'error');
+                return;
+            }
+
+            logDebug('Testing connection to:', webhookUrl);
+            showStatus('🔍 جاري اختبار الاتصال...', 'loading');
+
+            try {
+                const response = await fetch(webhookUrl, {
+                    method: 'GET',
+                    mode: 'no-cors'
+                });
+                
+                showStatus('✅ الرابط صحيح! يمكنك الآن توليد الامتحان', 'success');
+                logDebug('Connection test successful');
+            } catch (error) {
+                showStatus('⚠️ تحذير: قد يكون هناك مشكلة في الاتصال. جرّب التوليد على أي حال.', 'loading');
+                logDebug('Connection test error (this is normal with CORS):', error.message);
+            }
+        }
+
         // Function to generate exam
         async function generateExam() {
             const btn = document.getElementById('generateBtn');
             const spinner = document.getElementById('spinner');
             const webhookUrl = document.getElementById('webhookUrl').value.trim();
+
+            logDebug('Starting exam generation...');
 
             // Validate webhook URL
             if (!webhookUrl) {
@@ -294,54 +388,128 @@
             btn.textContent = '⏳ جاري التوليد...';
             spinner.style.display = 'block';
             hideStatus();
+            showStatus('⏳ جاري الاتصال بـ n8n وتوليد الامتحان...', 'loading');
+
+            const requestData = {
+                trigger_source: 'web_button',
+                timestamp: new Date().toISOString(),
+                exam_info: {
+                    type: 'MTE',
+                    level: 3,
+                    term: 1,
+                    course: 'ENG-301',
+                    themes: ['Travel and Culture', 'Safety First']
+                }
+            };
+
+            logDebug('Request URL:', webhookUrl);
+            logDebug('Request Data:', requestData);
 
             try {
-                // Call the n8n webhook
+                // Try POST request
+                logDebug('Attempting POST request...');
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        trigger_source: 'web_button',
-                        timestamp: new Date().toISOString(),
-                        exam_info: {
-                            type: 'MTE',
-                            level: 3,
-                            term: 1,
-                            course: 'ENG-301'
-                        }
-                    })
+                    body: JSON.stringify(requestData)
                 });
 
+                logDebug('Response status:', response.status);
+                logDebug('Response headers:', Object.fromEntries(response.headers.entries()));
+
                 if (response.ok) {
-                    const data = await response.json();
-                    showStatus('✅ تم توليد الامتحان بنجاح! تحقق من بريدك الإلكتروني.', 'success');
+                    let data;
+                    const contentType = response.headers.get('content-type');
+                    
+                    if (contentType && contentType.includes('application/json')) {
+                        data = await response.json();
+                        logDebug('Response data:', data);
+                    } else {
+                        const text = await response.text();
+                        logDebug('Response text:', text);
+                        data = { message: 'Success', text: text };
+                    }
+
+                    showStatus('✅ تم إرسال الطلب بنجاح! جاري توليد الامتحان... تحقق من بريدك الإلكتروني خلال دقائق.', 'success');
                     
                     // Show additional info if available
-                    if (data.exam_id) {
+                    if (data && data.exam_id) {
                         setTimeout(() => {
                             showStatus(`✅ نجح التوليد! رقم الامتحان: ${data.exam_id}`, 'success');
                         }, 2000);
                     }
                 } else {
-                    throw new Error('فشل في الاتصال بالخادم');
+                    // Try to get error message from response
+                    let errorMessage = `خطأ HTTP: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage += ` - ${JSON.stringify(errorData)}`;
+                        logDebug('Error response:', errorData);
+                    } catch (e) {
+                        const errorText = await response.text();
+                        if (errorText) {
+                            errorMessage += ` - ${errorText}`;
+                        }
+                        logDebug('Error text:', errorText);
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
 
             } catch (error) {
-                console.error('Error:', error);
-                showStatus('❌ حدث خطأ أثناء توليد الامتحان. الرجاء المحاولة مرة أخرى.', 'error');
+                console.error('❌ Error:', error);
+                logDebug('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+
+                let errorMsg = '❌ حدث خطأ: ';
+                
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorMsg += 'مشكلة في الاتصال. تأكد من:\n';
+                    errorMsg += '1️⃣ رابط الـ webhook صحيح\n';
+                    errorMsg += '2️⃣ الـ workflow مفعّل (Active) في n8n\n';
+                    errorMsg += '3️⃣ إعدادات CORS صحيحة في n8n';
+                } else if (error.message.includes('CORS')) {
+                    errorMsg += 'مشكلة CORS. أضف هذه الإعدادات في n8n Webhook:\n';
+                    errorMsg += 'Options → Response Headers:\n';
+                    errorMsg += 'Access-Control-Allow-Origin: *';
+                } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                    errorMsg += 'خطأ في المصادقة. تحقق من:\n';
+                    errorMsg += '1️⃣ إعدادات Authentication في webhook\n';
+                    errorMsg += '2️⃣ Username وPassword صحيحين';
+                } else {
+                    errorMsg += error.message;
+                }
+                
+                showStatus(errorMsg, 'error');
+
+                // Show helpful instructions
+                setTimeout(() => {
+                    const helpMsg = document.getElementById('statusMessage');
+                    helpMsg.innerHTML = errorMsg + '<br><br>📖 <strong>خطوات الحل:</strong><br>' +
+                        '1. افتح n8n → workflow<br>' +
+                        '2. تأكد أن الـ workflow مفعّل (Active)<br>' +
+                        '3. في Webhook node → Options → Response Headers<br>' +
+                        '4. أضف: Access-Control-Allow-Origin = *<br>' +
+                        '5. احفظ وحاول مرة أخرى';
+                }, 500);
             } finally {
                 // Re-enable button
                 btn.disabled = false;
                 btn.textContent = '🚀 توليد الامتحان الآن';
                 spinner.style.display = 'none';
+                logDebug('Generation process completed');
             }
         }
 
         // Save webhook URL to localStorage
         document.getElementById('webhookUrl').addEventListener('change', function() {
             localStorage.setItem('n8n_webhook_url', this.value);
+            logDebug('Webhook URL saved to localStorage');
         });
 
         // Load saved webhook URL
@@ -349,7 +517,9 @@
             const savedUrl = localStorage.getItem('n8n_webhook_url');
             if (savedUrl) {
                 document.getElementById('webhookUrl').value = savedUrl;
+                logDebug('Loaded saved webhook URL');
             }
+            logDebug('Page loaded successfully');
         });
 
         // Allow Enter key to trigger generation
@@ -357,6 +527,13 @@
             if (e.key === 'Enter') {
                 generateExam();
             }
+        });
+
+        // Log initial state
+        logDebug('Exam Generator initialized', {
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            timestamp: new Date().toISOString()
         });
     </script>
 </body>
