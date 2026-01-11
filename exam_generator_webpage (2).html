@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مولد الامتحانات - Level 3 Exam Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .info-card {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: right;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            font-size: 1.3em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+            font-weight: bold;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .status-message.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .config-section {
+            background: #fff9e6;
+            border: 2px dashed #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: right;
+        }
+
+        .config-section h3 {
+            color: #ff9800;
+            margin-bottom: 10px;
+        }
+
+        .config-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .config-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📝</div>
+        <h1>مولد الامتحانات التلقائي</h1>
+        <p class="subtitle">Level 3 Exam Generator</p>
+
+        <!-- Configuration Section -->
+        <div class="config-section">
+            <h3>⚙️ إعدادات الاتصال</h3>
+            <label class="config-label">رابط Webhook من n8n:</label>
+            <input 
+                type="text" 
+                id="webhookUrl" 
+                class="config-input" 
+                placeholder="https://your-n8n-instance.com/webhook/generate-exam"
+                value=""
+            >
+            <small style="color: #666; display: block; margin-top: 5px;">
+                احصل على هذا الرابط من n8n Webhook Trigger
+            </small>
+        </div>
+
+        <!-- Exam Info Card -->
+        <div class="info-card">
+            <h3 style="color: #667eea; margin-bottom: 15px;">📋 معلومات الامتحان</h3>
+            <div class="info-row">
+                <span class="info-label">نوع الامتحان:</span>
+                <span class="info-value">MTE (Mid-Term Exam)</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">المستوى:</span>
+                <span class="info-value">Level 3</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">الفصل:</span>
+                <span class="info-value">Term 1</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">الكورس:</span>
+                <span class="info-value">ENG-301</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">الثيمات:</span>
+                <span class="info-value">Travel and Culture, Safety First</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">إجمالي الدرجات:</span>
+                <span class="info-value">35 درجة</span>
+            </div>
+        </div>
+
+        <!-- Generate Button -->
+        <button class="generate-btn" id="generateBtn" onclick="generateExam()">
+            🚀 توليد الامتحان الآن
+        </button>
+
+        <!-- Loading Spinner -->
+        <div class="spinner" id="spinner"></div>
+
+        <!-- Status Message -->
+        <div class="status-message" id="statusMessage"></div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>الامتحان سيتم إرساله إلى: widadtabook@gmail.com</p>
+            <p style="margin-top: 5px; font-size: 0.85em;">
+                سيتم تحديث Google Sheets تلقائياً بعد التوليد
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Function to show status messages
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-message ' + type;
+            statusDiv.style.display = 'block';
+        }
+
+        // Function to hide status
+        function hideStatus() {
+            document.getElementById('statusMessage').style.display = 'none';
+        }
+
+        // Function to generate exam
+        async function generateExam() {
+            const btn = document.getElementById('generateBtn');
+            const spinner = document.getElementById('spinner');
+            const webhookUrl = document.getElementById('webhookUrl').value.trim();
+
+            // Validate webhook URL
+            if (!webhookUrl) {
+                showStatus('⚠️ الرجاء إدخال رابط Webhook من n8n أولاً!', 'error');
+                return;
+            }
+
+            if (!webhookUrl.startsWith('http')) {
+                showStatus('⚠️ الرابط غير صحيح! يجب أن يبدأ بـ http:// أو https://', 'error');
+                return;
+            }
+
+            // Disable button and show loading
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري التوليد...';
+            spinner.style.display = 'block';
+            hideStatus();
+
+            try {
+                // Call the n8n webhook
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        trigger_source: 'web_button',
+                        timestamp: new Date().toISOString(),
+                        exam_info: {
+                            type: 'MTE',
+                            level: 3,
+                            term: 1,
+                            course: 'ENG-301'
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('✅ تم توليد الامتحان بنجاح! تحقق من بريدك الإلكتروني.', 'success');
+                    
+                    // Show additional info if available
+                    if (data.exam_id) {
+                        setTimeout(() => {
+                            showStatus(`✅ نجح التوليد! رقم الامتحان: ${data.exam_id}`, 'success');
+                        }, 2000);
+                    }
+                } else {
+                    throw new Error('فشل في الاتصال بالخادم');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('❌ حدث خطأ أثناء توليد الامتحان. الرجاء المحاولة مرة أخرى.', 'error');
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                btn.textContent = '🚀 توليد الامتحان الآن';
+                spinner.style.display = 'none';
+            }
+        }
+
+        // Save webhook URL to localStorage
+        document.getElementById('webhookUrl').addEventListener('change', function() {
+            localStorage.setItem('n8n_webhook_url', this.value);
+        });
+
+        // Load saved webhook URL
+        window.addEventListener('load', function() {
+            const savedUrl = localStorage.getItem('n8n_webhook_url');
+            if (savedUrl) {
+                document.getElementById('webhookUrl').value = savedUrl;
+            }
+        });
+
+        // Allow Enter key to trigger generation
+        document.getElementById('webhookUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateExam();
+            }
+        });
+    </script>
+</body>
+</html>
